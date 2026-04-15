@@ -1,12 +1,16 @@
     services:
       api:
         image: ghcr.io/ervinhun/todowithextras-api:staging
+        env_file:
+          - .env
         container_name: todowithextras-api
         ports:
           - "5000:5000"
 
       client:
         image: ghcr.io/ervinhun/todowithextras-client:staging
+        env_file:
+          - .env
         container_name: dowa-client
         ports:
           - "80:80"
