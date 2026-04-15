@@ -1,11 +1,11 @@
-name: Deploy to production
+name: Deploy to staging
 
 on:
   workflow_run:
-    workflows: ["Release Gates"]
+    workflows: ["CI"]
     types: [completed]
     branches:
-      - master
+      - dev
 
 permissions:
   contents: write
@@ -103,9 +103,9 @@ jobs:
       - name: Deliver Docker Compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ vars.STAGING_SERVER_IP }}
-          username: ${{ vars.STAGING_SERVER_USERNAME }}
-          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          host: ${{ vars.TEST_SERVER_IP }}
+          username: ${{ vars.TEST_SERVER_USERNAME }}
+          key: ${{ secrets.TEST_SERVER_SSH_KEY }}
           source: compose.deploy.yml
           target: ~/dowa/
 
@@ -115,9 +115,9 @@ jobs:
       - name: Run Docker Compose on server
         uses: appleboy/ssh-action@v1.2.5
         with:
-          host: ${{ vars.STAGING_SERVER_IP }}
-          username: ${{ vars.STAGING_SERVER_USERNAME }}
-          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          host: ${{ vars.TEST_SERVER_IP }}
+          username: ${{ vars.TEST_SERVER_USERNAME }}
+          key: ${{ secrets.TEST_SERVER_SSH_KEY }}
           script: |
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
