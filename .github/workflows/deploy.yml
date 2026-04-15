@@ -2,8 +2,8 @@ name: Deploy to production
 
 on:
   workflow_run:
-    #workflows: ["Release Gates"]
-    #types: [completed]
+    workflows: ["Release Gates"]
+    types: [completed]
     branches:
       - master
 
