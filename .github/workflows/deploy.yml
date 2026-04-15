@@ -5,7 +5,7 @@ on:
     workflows: ["Release Gates"]
     types: [completed]
     branches:
-      - main
+      - master
 
 permissions:
   contents: write
