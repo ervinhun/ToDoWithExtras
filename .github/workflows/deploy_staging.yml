@@ -21,26 +21,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-
-      # ---------------------------
-      # VERSIONING - DISABLED FOR STAGING (ONLY RELEVANT ON PRODUCTION)
-      # ---------------------------
-      #- name: Application version
-      #  id: semver-app
-      #  uses: paulhatch/semantic-version@v5.4.0
-      #  with:
-      #    bump_each_commit: true
-
-      #- name: Echo version
-      #  run: |
-      #    echo "Version: ${{ env.VERSION }}"
       
       #---------------------------
       # VERSIONING - FIX FOR STAGING (USE COMMIT SHA)
       #---------------------------
       - name: Set version (staging)
-        if: ${{ github.event.workflow_run.head_branch == 'dev' }}
-        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
+        run: echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
 
       # ---------------------------
       # LOGIN TO GHCR (IMPORTANT FIX)
@@ -69,7 +55,7 @@ jobs:
       - name: Build and push SERVER image
         run: |
           docker build \
-            -t $SERVER_IMAGE:staging \
+            -t $SERVER_IMAGE:latest-staging \
             -t $SERVER_IMAGE:${{ env.VERSION }} \
             -f Dockerfile \
             .
@@ -82,30 +68,12 @@ jobs:
       - name: Build and push CLIENT image
         run: |
           docker build \
-            -t $CLIENT_IMAGE:staging \
+            -t $CLIENT_IMAGE:latest-staging \
             -t $CLIENT_IMAGE:${{ env.VERSION }} \
             -f client/Dockerfile \
             ./client
 
           docker push $CLIENT_IMAGE --all-tags
-
-      # ---------------------------
-      # CREATE GITHUB RELEASE
-      # ---------------------------
-      - name: Create release notes
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ env.VERSION }}
-          name: Release ${{ env.VERSION }}
-          generateReleaseNotes: true
-          allowUpdates: true
-          body: |
-            Version: ${{ env.VERSION }}
-            Commit: ${{ github.event.workflow_run.head_sha }}
-
-            Images:
-            - ${{ env.SERVER_IMAGE }}:${{ env.VERSION }}
-            - ${{ env.CLIENT_IMAGE }}:${{ env.VERSION }}
 
       # ---------------------------
       # DEPLOY COMPOSE FILE
@@ -116,7 +84,7 @@ jobs:
           host: ${{ vars.STAGING_SERVER_IP }}
           username: ${{ vars.STAGING_SERVER_USERNAME }}
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source: compose.deploy.yml
+          source: compose.staging.yml
           target: ~/dowa/
 
       # ---------------------------
@@ -133,5 +101,5 @@ jobs:
 
             cd ~/dowa
 
-            docker compose -f compose.deploy.yml pull
-            docker compose -f compose.deploy.yml up -d
+            docker compose -f compose.staging.yml pull
+            docker compose -f compose.staging.yml up -d

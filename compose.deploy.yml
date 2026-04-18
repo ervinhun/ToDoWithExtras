@@ -1,6 +1,6 @@
     services:
       api:
-        image: ghcr.io/ervinhun/todowithextras-api:staging
+        image: ghcr.io/ervinhun/todowithextras-api:${VERSION}
         env_file:
           - .env
         container_name: todowithextras-api
@@ -8,7 +8,7 @@
           - "5000:8080"
 
       client:
-        image: ghcr.io/ervinhun/todowithextras-client:staging
+        image: ghcr.io/ervinhun/todowithextras-client:${VERSION}
         env_file:
           - .env
         container_name: dowa-client
