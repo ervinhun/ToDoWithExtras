@@ -76,7 +76,8 @@ jobs:
           username: ${{ vars.STAGING_SERVER_USERNAME }}
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: compose.staging.yml
-          target: ~/dowa/
+          target: /home/${{ vars.STAGING_SERVER_USERNAME }}/dowa/
+          overwrite: true
 
       # ---------------------------
       # REMOTE DEPLOY
@@ -88,9 +89,13 @@ jobs:
           username: ${{ vars.STAGING_SERVER_USERNAME }}
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
+            set -e
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            cd ~/dowa
+            cd /home/${{ vars.STAGING_SERVER_USERNAME }}/dowa
 
-            docker compose -f compose.staging.yml pull
-            docker compose -f compose.staging.yml up -d
+            test -f compose.staging.yml
+            ls -la compose.staging.yml
+
+            docker compose --env-file .env -f compose.staging.yml pull
+            docker compose --env-file .env -f compose.staging.yml up -d
