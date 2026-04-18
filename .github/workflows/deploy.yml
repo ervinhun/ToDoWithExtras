@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   delivery:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'master' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -125,6 +125,8 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
             cd ~/dowa
+
+            export VERSION="${{ steps.semver-app.outputs.version }}"
 
             docker compose -f compose.deploy.yml pull
             docker compose -f compose.deploy.yml up -d
