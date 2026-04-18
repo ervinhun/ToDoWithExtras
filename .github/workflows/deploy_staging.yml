@@ -1,11 +1,10 @@
-name: Deploy to production
+name: Deploy to staging
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["Release Gates"]
     types: [completed]
-    branches:
-      - dev
+    branches: [dev]
 
 permissions:
   contents: write
@@ -13,7 +12,7 @@ permissions:
 
 jobs:
   delivery:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -26,7 +25,7 @@ jobs:
       # VERSIONING - FIX FOR STAGING (USE COMMIT SHA)
       #---------------------------
       - name: Set version (staging)
-        run: echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+        run: echo "VERSION=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_ENV
 
       # ---------------------------
       # LOGIN TO GHCR (IMPORTANT FIX)
