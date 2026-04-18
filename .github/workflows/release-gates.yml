@@ -89,6 +89,7 @@ jobs:
       - name: Apply Flyway migrations to local perf database
         run: |
           docker run --rm \
+            --network "container:${{ job.services.postgres.id }}" \
             -v "${{ github.workspace }}/server/flyway/migrations:/flyway/sql" \
             redgate/flyway:11.12.0 \
             -url="$FLYWAY_URL" \
