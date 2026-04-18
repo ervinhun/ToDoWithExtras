@@ -28,6 +28,7 @@ jobs:
             migrate
 
   integration-core-feature:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -153,6 +154,16 @@ jobs:
       - name: Run staging core-flow E2E smoke
         run: |
           BASE_URL="${STAGING_BASE_URL%/}"
+          TASK_ID=""
+
+          cleanup() {
+            if [ -n "$TASK_ID" ]; then
+              curl -fsS -X DELETE "$BASE_URL/api/Task/DeleteTask?id=$TASK_ID" > /dev/null || \
+                echo "Warning: failed to delete staging test task $TASK_ID"
+            fi
+          }
+
+          trap cleanup EXIT
 
           CREATE_RESPONSE=$(curl -fsS \
             -H "Content-Type: application/json" \
