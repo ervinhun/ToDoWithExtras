@@ -1,4 +1,4 @@
-name: Deploy to staging
+name: Deploy to production
 
 on:
   workflow_run:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   delivery:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -23,17 +23,24 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       # ---------------------------
-      # VERSIONING
+      # VERSIONING - DISABLED FOR STAGING (ONLY RELEVANT ON PRODUCTION)
       # ---------------------------
-      - name: Application version
-        id: semver-app
-        uses: paulhatch/semantic-version@v5.4.0
-        with:
-          bump_each_commit: true
+      #- name: Application version
+      #  id: semver-app
+      #  uses: paulhatch/semantic-version@v5.4.0
+      #  with:
+      #    bump_each_commit: true
 
-      - name: Echo version
-        run: |
-          echo "Version: ${{ steps.semver-app.outputs.version }}"
+      #- name: Echo version
+      #  run: |
+      #    echo "Version: ${{ env.VERSION }}"
+      
+      #---------------------------
+      # VERSIONING - FIX FOR STAGING (USE COMMIT SHA)
+      #---------------------------
+      - name: Set version (staging)
+        if: ${{ github.event.workflow_run.head_branch == 'dev' }}
+        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       # ---------------------------
       # LOGIN TO GHCR (IMPORTANT FIX)
@@ -42,16 +49,19 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # ---------------------------
       # DEFINE CLEAN IMAGE NAMES (FIX FOR FORK ISSUE)
       # ---------------------------
       - name: Set image names
         run: |
-          echo "SERVER_IMAGE=ghcr.io/${{ secrets.GHCR_USERNAME }}/devops-project-server" >> $GITHUB_ENV
-          echo "CLIENT_IMAGE=ghcr.io/${{ secrets.GHCR_USERNAME }}/devops-project-client" >> $GITHUB_ENV
+          OWNER_LOWER="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          REPO_LOWER="$(echo "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_PREFIX="ghcr.io/${OWNER_LOWER}/${REPO_LOWER}"
+          echo "SERVER_IMAGE=${IMAGE_PREFIX}-api" >> $GITHUB_ENV
+          echo "CLIENT_IMAGE=${IMAGE_PREFIX}-client" >> $GITHUB_ENV
 
       # ---------------------------
       # BUILD SERVER IMAGE
@@ -60,7 +70,7 @@ jobs:
         run: |
           docker build \
             -t $SERVER_IMAGE:staging \
-            -t $SERVER_IMAGE:${{ steps.semver-app.outputs.version }} \
+            -t $SERVER_IMAGE:${{ env.VERSION }} \
             -f Dockerfile \
             .
 
@@ -73,7 +83,7 @@ jobs:
         run: |
           docker build \
             -t $CLIENT_IMAGE:staging \
-            -t $CLIENT_IMAGE:${{ steps.semver-app.outputs.version }} \
+            -t $CLIENT_IMAGE:${{ env.VERSION }} \
             -f client/Dockerfile \
             ./client
 
@@ -85,17 +95,17 @@ jobs:
       - name: Create release notes
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.semver-app.outputs.version }}
-          name: Release ${{ steps.semver-app.outputs.version }}
+          tag: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
           generateReleaseNotes: true
           allowUpdates: true
           body: |
-            Version: ${{ steps.semver-app.outputs.version }}
+            Version: ${{ env.VERSION }}
             Commit: ${{ github.event.workflow_run.head_sha }}
 
             Images:
-            - ${{ env.SERVER_IMAGE }}:${{ steps.semver-app.outputs.version }}
-            - ${{ env.CLIENT_IMAGE }}:${{ steps.semver-app.outputs.version }}
+            - ${{ env.SERVER_IMAGE }}:${{ env.VERSION }}
+            - ${{ env.CLIENT_IMAGE }}:${{ env.VERSION }}
 
       # ---------------------------
       # DEPLOY COMPOSE FILE
@@ -103,9 +113,9 @@ jobs:
       - name: Deliver Docker Compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ vars.TEST_SERVER_IP }}
-          username: ${{ vars.TEST_SERVER_USERNAME }}
-          key: ${{ secrets.TEST_SERVER_SSH_KEY }}
+          host: ${{ vars.STAGING_SERVER_IP }}
+          username: ${{ vars.STAGING_SERVER_USERNAME }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: compose.deploy.yml
           target: ~/dowa/
 
@@ -115,11 +125,11 @@ jobs:
       - name: Run Docker Compose on server
         uses: appleboy/ssh-action@v1.2.5
         with:
-          host: ${{ vars.TEST_SERVER_IP }}
-          username: ${{ vars.TEST_SERVER_USERNAME }}
-          key: ${{ secrets.TEST_SERVER_SSH_KEY }}
+          host: ${{ vars.STAGING_SERVER_IP }}
+          username: ${{ vars.STAGING_SERVER_USERNAME }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
             cd ~/dowa
 
