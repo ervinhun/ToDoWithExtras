@@ -21,12 +21,6 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       
-      #---------------------------
-      # VERSIONING - FIX FOR STAGING (USE COMMIT SHA)
-      #---------------------------
-      - name: Set version (staging)
-        run: echo "VERSION=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_ENV
-
       # ---------------------------
       # LOGIN TO GHCR (IMPORTANT FIX)
       # ---------------------------
@@ -55,11 +49,10 @@ jobs:
         run: |
           docker build \
             -t $SERVER_IMAGE:latest-staging \
-            -t $SERVER_IMAGE:${{ env.VERSION }} \
             -f Dockerfile \
             .
 
-          docker push $SERVER_IMAGE --all-tags
+          docker push $SERVER_IMAGE:latest-staging
 
       # ---------------------------
       # BUILD CLIENT IMAGE
@@ -68,11 +61,10 @@ jobs:
         run: |
           docker build \
             -t $CLIENT_IMAGE:latest-staging \
-            -t $CLIENT_IMAGE:${{ env.VERSION }} \
             -f client/Dockerfile \
             ./client
 
-          docker push $CLIENT_IMAGE --all-tags
+          docker push $CLIENT_IMAGE:latest-staging
 
       # ---------------------------
       # DEPLOY COMPOSE FILE

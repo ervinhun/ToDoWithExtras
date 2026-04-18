@@ -126,5 +126,7 @@ jobs:
 
             cd ~/dowa
 
+            export VERSION="${{ steps.semver-app.outputs.version }}"
+
             docker compose -f compose.deploy.yml pull
             docker compose -f compose.deploy.yml up -d
