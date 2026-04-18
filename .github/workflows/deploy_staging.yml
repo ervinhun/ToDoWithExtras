@@ -97,5 +97,5 @@ jobs:
             test -f compose.staging.yml
             ls -la compose.staging.yml
 
-            docker compose -f compose.staging.yml pull
-            docker compose -f compose.staging.yml up -d
+            docker compose --env-file .env -f compose.staging.yml pull
+            docker compose --env-file .env -f compose.staging.yml up -d
