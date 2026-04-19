@@ -1,7 +1,5 @@
 name: Deploy to production
 
-run-name: Deploy prod from ${{ github.event.workflow_run.head_branch }} @ ${{ github.event.workflow_run.head_sha }}
-
 on:
   workflow_run:
     workflows: ["Release Gates"]

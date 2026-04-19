@@ -1,12 +1,8 @@
 name: Deploy to staging
 
-run-name: Deploy staging from ${{ github.event.workflow_run.head_branch }} @ ${{ github.event.workflow_run.head_sha }}
-
 on:
-  workflow_run:
-    workflows: [""]
-    types: [completed]
-    branches: [dev]
+  push:
+    branches: [ "master", "dev" ]
 
 permissions:
   contents: write
